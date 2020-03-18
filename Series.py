@@ -1,44 +1,48 @@
-from threading import Lock
-import multiprocessing
+from multiprocessing import Process, Queue, cpu_count
 import math
-
 
 class Series():
     def __init__(self):
-        self.lock = Lock()
-        self.result = 0.0
-        
+        self.coreCount = cpu_count()
 
-    def sumThread(self, i, n, functionToSum, x):
-        sum=0.0
-        for t in range(i, n+1):
-            sum += functionToSum(x)
+    def weierstrauss(x, n, a=0.5, b=7):
+        return (a**n) * math.cos((b**n * math.pi * x))
 
-        self.lock.acquire()
-        print(sum)
-        self.result += sum
-        self.lock.release()
 
-    def summation(self, i , n , functionToSum, x):
+    def sumThread(self, q, i, n, functionToSum, x):
+        result=0.0
+        if i != 0: i+=1
+        for t in range(int(i), int(n+1)):
+            result += functionToSum(x, t)
+
+        q.put(result)
+
+
+    def summation(self, i , n , functionToSum, x=1):
         threads = []
+        q = Queue()
 
-        for t in range(0, multiprocessing.cpu_count()):
-            #seperate chunks of series for each thread range.
-            newThread = multiprocessing.Process(target=self.sumThread, args=(i, n, functionToSum, x))
-            threads.append(newThread)
+        threadWork = n/self.coreCount
+        upperBound = threadWork
+        lowerBound = 0
+
+        for t in range(0, self.coreCount):
+            newThread = Process(target=self.sumThread, args=(q, lowerBound, upperBound, functionToSum, x))
             newThread.start()
+            threads.append(newThread)
+
+            lowerBound += threadWork
+            upperBound += threadWork
 
         for thread in threads:
             thread.join()
 
-        return self.result
+        result = 0
+        while(not q.empty()):
+            result += q.get()
 
+        return result
 
-def Weierstrauss(x):
-    return (.5**x) * math.cos((11**math.pi * x))
 
 A = Series()
-print(A.summation(0, 1000, Weierstrauss, 7))
-
-
-
+print("result: "+str(A.summation(0, 100, Series.weierstrauss, .5)))
