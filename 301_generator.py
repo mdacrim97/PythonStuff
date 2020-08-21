@@ -13,7 +13,7 @@ with open(csvPath, 'r') as f:
 	ofile.write(title + "\n")	
 
 	for row in reader:
-		redirect = "Redirect 301 " + row[1][19:] + " " + row[2] + "\n"
+		redirect = "301 Redirect " + row[1][19:] + " " + row[2] + "\n"
 		print(redirect)
 		
 		ofile.write(redirect)
